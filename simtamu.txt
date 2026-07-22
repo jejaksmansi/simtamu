@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buku Tamu — SMA Negeri 1 Singorojo</title>
+<style>
+  :root{
+    --navy:#132C45;
+    --navy-deep:#0B1D2F;
+    --gold:#C9A227;
+    --gold-soft:#E4CD82;
+    --paper:#FAF7EF;
+    --paper-line:#DED6C1;
+    --ink:#20242B;
+    --ink-soft:#5B6472;
+    --green:#2F6F4E;
+    --red:#A3372F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Source Sans 3','Segoe UI',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+  h1,h2,h3,.display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'JetBrains Mono', monospace; letter-spacing:.02em; }
+
+  /* ---------- background texture ---------- */
+  .texture-bg{
+    position:fixed; inset:0; z-index:-1;
+    background-image:
+      repeating-linear-gradient(135deg, rgba(19,44,69,0.025) 0 2px, transparent 2px 26px),
+      repeating-linear-gradient(45deg, rgba(19,44,69,0.02) 0 2px, transparent 2px 26px);
+  }
+
+  /* ---------- LOGIN SCREEN ---------- */
+  #login-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .login-card{
+    width:100%; max-width:420px;
+    background:#fff;
+    border:1px solid var(--paper-line);
+    border-radius:4px;
+    box-shadow:0 24px 60px -30px rgba(11,29,47,0.4);
+    overflow:hidden;
+  }
+  .login-crest-band{
+    background:var(--navy);
+    background-image: linear-gradient(180deg, var(--navy), var(--navy-deep));
+    padding:36px 32px 28px;
+    text-align:center;
+    position:relative;
+  }
+  .login-crest-band::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0; height:4px;
+    background:linear-gradient(90deg, var(--gold), var(--gold-soft), var(--gold));
+  }
+  .seal{
+    width:82px; height:82px; margin:0 auto 14px;
+    border-radius:50%;
+    border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    background:radial-gradient(circle at 50% 40%, rgba(201,162,39,0.15), transparent 70%);
+  }
+  .seal::before{
+    content:"";
+    position:absolute; inset:6px;
+    border:1px dashed rgba(201,162,39,0.6);
+    border-radius:50%;
+  }
+  .seal-mono{
+    font-family:'Fraunces', serif; font-weight:600; font-size:22px;
+    color:var(--gold-soft);
+  }
+  .login-crest-band h1{
+    color:#fff; font-size:19px; font-weight:600; margin:0 0 4px; letter-spacing:.02em;
+  }
+  .login-crest-band p{
+    color:var(--gold-soft); font-size:12px; margin:0; letter-spacing:.14em; text-transform:uppercase;
+  }
+  .login-body{ padding:30px 32px 32px; }
+  .login-body h2{ font-size:16px; margin:0 0 4px; color:var(--navy); font-weight:600;}
+  .login-body .sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 22px; }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-size:11.5px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .field select, .field input{
+    width:100%; padding:11px 12px; border:1px solid var(--paper-line);
+    border-radius:3px; font-size:14.5px; font-family:inherit; background:#fff; color:var(--ink);
+  }
+  .field select:focus, .field input:focus{ outline:2px solid var(--navy); outline-offset:1px; }
+  .btn{
+    width:100%; padding:12px; border:none; border-radius:3px;
+    background:var(--navy); color:#fff; font-size:14.5px; font-weight:600;
+    cursor:pointer; letter-spacing:.02em; transition:background .15s;
+  }
+  .btn:hover{ background:var(--navy-deep); }
+  .btn-outline{
+    background:transparent; border:1px solid var(--navy); color:var(--navy);
+  }
+  .btn-outline:hover{ background:rgba(19,44,69,0.06); }
+  .login-error{
+    background:#FBEAE8; color:var(--red); border:1px solid #E9C4BF;
+    padding:9px 12px; border-radius:3px; font-size:13px; margin-bottom:14px; display:none;
+  }
+  .login-hint{
+    margin-top:18px; padding-top:16px; border-top:1px dashed var(--paper-line);
+    font-size:11.5px; color:var(--ink-soft); line-height:1.6;
+  }
+  .login-hint b{ color:var(--ink); }
+
+  /* ---------- APP SHELL ---------- */
+  #app-screen{ display:none; min-height:100vh; }
+  header.topbar{
+    background:var(--navy); color:#fff; padding:0 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:10;
+    box-shadow:0 2px 12px rgba(0,0,0,0.15);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; padding:14px 0; }
+  .brand .mini-seal{
+    width:38px; height:38px; border-radius:50%; border:1.5px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+    font-family:'Fraunces',serif; font-weight:600; color:var(--gold-soft); flex-shrink:0;
+  }
+  .brand-text .t1{ font-size:14px; font-weight:600; line-height:1.2; }
+  .brand-text .t2{ font-size:11px; color:var(--gold-soft); letter-spacing:.1em; text-transform:uppercase; }
+  .who{ display:flex; align-items:center; gap:14px; font-size:13px; }
+  .who .badge{
+    background:rgba(255,255,255,0.1); padding:5px 12px; border-radius:20px;
+    border:1px solid rgba(201,162,39,0.4); font-size:12px;
+  }
+  .who button{
+    background:transparent; border:1px solid rgba(255,255,255,0.35); color:#fff;
+    padding:7px 14px; border-radius:3px; font-size:12.5px; cursor:pointer;
+  }
+  .who button:hover{ background:rgba(255,255,255,0.1); }
+
+  nav.tabs{
+    display:flex; gap:2px; background:#fff; border-bottom:1px solid var(--paper-line);
+    padding:0 28px; overflow-x:auto;
+  }
+  nav.tabs button{
+    padding:14px 18px; background:none; border:none; cursor:pointer;
+    font-size:13.5px; font-weight:600; color:var(--ink-soft);
+    border-bottom:3px solid transparent; white-space:nowrap;
+  }
+  nav.tabs button.active{ color:var(--navy); border-bottom-color:var(--gold); }
+
+  main{ max-width:1080px; margin:0 auto; padding:28px; }
+  .panel{
+    background:#fff; border:1px solid var(--paper-line); border-radius:4px;
+    padding:26px; margin-bottom:20px;
+  }
+  .panel h2{ font-size:17px; margin:0 0 3px; color:var(--navy); }
+  .panel .desc{ font-size:12.5px; color:var(--ink-soft); margin:0 0 20px; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .grid2{ grid-template-columns:1fr; } }
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--green); color:#fff;
+    padding:12px 18px; border-radius:4px; font-size:13.5px; box-shadow:0 10px 24px rgba(0,0,0,0.2);
+    display:none; z-index:50;
+  }
+
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-soft); border-bottom:2px solid var(--navy); padding:9px 10px; white-space:nowrap;
+  }
+  tbody td{ padding:10px; border-bottom:1px solid var(--paper-line); vertical-align:top; }
+  tbody tr:hover{ background:rgba(201,162,39,0.06); }
+  .empty-state{
+    text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:13.5px;
+  }
+  .del-btn{
+    background:none; border:1px solid var(--red); color:var(--red);
+    padding:5px 10px; border-radius:3px; cursor:pointer; font-size:12px;
+  }
+  .del-btn:hover{ background:#FBEAE8; }
+
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-bottom:18px; }
+  .toolbar .field{ margin-bottom:0; min-width:150px; }
+  .toolbar .btn, .toolbar .btn-outline{ width:auto; padding:11px 18px; white-space:nowrap; }
+
+  .stat-row{ display:flex; gap:14px; margin-bottom:18px; flex-wrap:wrap; }
+  .stat{
+    flex:1; min-width:140px; background:var(--paper); border:1px solid var(--paper-line);
+    border-radius:4px; padding:14px 16px;
+  }
+  .stat .n{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--navy); }
+  .stat .l{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); }
+
+  /* ---------- PRINT / LAPORAN ---------- */
+  #print-area{ display:none; }
+  .kop-surat{
+    text-align:center; border-bottom:3px double var(--navy); padding-bottom:14px; margin-bottom:20px;
+  }
+  .kop-surat .baris1{ font-size:12px; letter-spacing:.05em; }
+  .kop-surat .baris2{ font-family:'Fraunces',serif; font-size:20px; font-weight:700; color:var(--navy); margin:2px 0; }
+  .kop-surat .baris3{ font-size:11.5px; color:var(--ink-soft); }
+  .lap-title{ text-align:center; margin:18px 0 22px; }
+  .lap-title h3{ margin:0 0 4px; font-size:16px; text-decoration:underline; text-underline-offset:4px; }
+  .lap-title p{ margin:0; font-size:12.5px; }
+  .sign-block{
+    display:flex; justify-content:flex-end; margin-top:50px;
+  }
+  .sign-box{ text-align:center; width:220px; font-size:13px; }
+  .sign-box .stamp-ring{
+    width:80px; height:80px; margin:10px auto; border-radius:50%; border:1.5px solid var(--navy);
+    display:flex; align-items:center; justify-content:center; position:relative; opacity:.85;
+  }
+  .sign-box .stamp-ring::before{ content:""; position:absolute; inset:5px; border:1px dashed var(--navy); border-radius:50%; }
+  .sign-box .stamp-ring span{ font-family:'Fraunces',serif; font-size:10px; font-weight:600; }
+  .sign-box .name{ margin-top:6px; font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #print-area, #print-area *{ visibility:visible; }
+    #print-area{ display:block; position:absolute; left:0; top:0; width:100%; padding:20px 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="texture-bg"></div>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-crest-band">
+      <div class="seal"><span class="seal-mono">S1</span></div>
+      <h1>SMA Negeri 1 Singorojo</h1>
+      <p>Buku Tamu Digital</p>
+    </div>
+    <div class="login-body">
+      <h2>Masuk sebagai Petugas</h2>
+      <p class="sub">Silakan pilih akun dan masukkan kata sandi untuk mengelola buku tamu.</p>
+      <div class="login-error" id="login-error">ID atau kata sandi tidak sesuai. Silakan coba lagi.</div>
+      <div class="field">
+        <label for="login-id">Petugas</label>
+        <select id="login-id">
+          <option value="petugas1">Petugas 1</option>
+          <option value="petugas2">Petugas 2</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="login-pass">Kata Sandi</label>
+        <input type="password" id="login-pass" placeholder="Masukkan kata sandi" onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <button class="btn" onclick="doLogin()">Masuk</button>
+      <div class="login-hint">
+        <b>Akun demo:</b><br>
+        Petugas 1 — sandi: <b>sman1sgrjo1</b><br>
+        Petugas 2 — sandi: <b>sman1sgrjo2</b>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="app-screen">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mini-seal">S1</div>
+      <div class="brand-text">
+        <div class="t1">Buku Tamu — SMA Negeri 1 Singorojo</div>
+        <div class="t2">Sistem Penerimaan Tamu</div>
+      </div>
+    </div>
+    <div class="who">
+      <span class="badge" id="who-badge">Petugas</span>
+      <button onclick="doLogout()">Keluar</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="input" onclick="switchTab('input')">Input Tamu</button>
+    <button class="tab-btn" data-tab="data" onclick="switchTab('data')">Data Tamu</button>
+    <button class="tab-btn" data-tab="laporan" onclick="switchTab('laporan')">Laporan Bulanan</button>
+  </nav>
+
+  <main>
+    <!-- TAB: INPUT TAMU -->
+    <section class="panel" id="tab-input">
+      <h2>Formulir Tamu Baru</h2>
+      <p class="desc">Lengkapi data tamu yang datang berkunjung ke SMA Negeri 1 Singorojo.</p>
+      <div class="grid2">
+        <div class="field">
+          <label>Nama Tamu</label>
+          <input type="text" id="f-nama" placeholder="Contoh: Budi Santoso">
+        </div>
+        <div class="field">
+          <label>Instansi / Asal</label>
+          <input type="text" id="f-instansi" placeholder="Contoh: Dinas Pendidikan Kab. Kendal">
+        </div>
+      </div>
+      <div class="field">
+        <label>Alamat</label>
+        <input type="text" id="f-alamat" placeholder="Alamat lengkap tamu">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Nomor HP</label>
+          <input type="text" id="f-hp" placeholder="08xxxxxxxxxx">
+        </div>
+        <div class="field">
+          <label>Bertemu Dengan</label>
+          <select id="f-bertemu">
+            <option value="">— Pilih —</option>
+            <option value="Kepala Sekolah">Kepala Sekolah</option>
+            <option value="Waka. Humas">Waka. Humas</option>
+            <option value="Waka. Kurikulum">Waka. Kurikulum</option>
+            <option value="Waka. Kesiswaan">Waka. Kesiswaan</option>
+            <option value="Waka. Sarpras">Waka. Sarpras</option>
+            <option value="Guru">Guru</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Keperluan</label>
+        <input type="text" id="f-keperluan" placeholder="Tujuan kunjungan">
+      </div>
+      <button class="btn" style="width:auto; padding:12px 24px;" onclick="submitTamu()">Simpan Data Tamu</button>
+    </section>
+
+    <!-- TAB: DATA TAMU -->
+    <section class="panel" id="tab-data" style="display:none;">
+      <h2>Data Tamu Tersimpan</h2>
+      <p class="desc">Seluruh tamu yang telah tercatat oleh Petugas 1 maupun Petugas 2.</p>
+      <div class="toolbar">
+        <div class="field">
+          <label>Cari nama / instansi</label>
+          <input type="text" id="search-box" placeholder="Ketik untuk mencari..." oninput="renderDataTable()">
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th><th>Tanggal</th><th>Nama</th><th>Instansi</th><th>No. HP</th>
+              <th>Keperluan</th><th>Bertemu</th><th>Petugas</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="data-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="data-empty" style="display:none;">Belum ada data tamu. Silakan input pada tab "Input Tamu".</div>
+      </div>
+    </section>
+
+    <!-- TAB: LAPORAN -->
+    <section class="panel" id="tab-laporan" style="display:none;">
+      <h2>Laporan Kunjungan Bulanan</h2>
+      <p class="desc">Pilih bulan dan tahun untuk melihat serta mencetak rekap kunjungan tamu.</p>
+      <div class="toolbar">
+        <div class="field">
+          <label>Bulan</label>
+          <select id="lap-bulan"></select>
+        </div>
+        <div class="field">
+          <label>Tahun</label>
+          <select id="lap-tahun"></select>
+        </div>
+        <button class="btn-outline" onclick="renderLaporan()">Tampilkan</button>
+        <button class="btn" onclick="cetakLaporan()">🖨️ Cetak Laporan</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="stat-total">0</div><div class="l">Total Tamu Bulan Ini</div></div>
+        <div class="stat"><div class="n" id="stat-instansi">0</div><div class="l">Instansi Berbeda</div></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>No</th><th>Tanggal</th><th>Nama</th><th>Instansi</th><th>Keperluan</th><th>Bertemu</th></tr>
+          </thead>
+          <tbody id="lap-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="lap-empty" style="display:none;">Tidak ada data kunjungan pada periode ini.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============ PRINT AREA (hidden on screen) ============ -->
+<div id="print-area">
+  <div class="kop-surat">
+    <div class="baris1">PEMERINTAH PROVINSI JAWA TENGAH — DINAS PENDIDIKAN DAN KEBUDAYAAN</div>
+    <div class="baris2">SMA NEGERI 1 SINGOROJO</div>
+    <div class="baris3">Kecamatan Singorojo, Kabupaten Kendal, Jawa Tengah</div>
+  </div>
+  <div class="lap-title">
+    <h3>LAPORAN BUKU TAMU BULANAN</h3>
+    <p id="print-periode">Periode: —</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>No</th><th>Tanggal</th><th>Nama Tamu</th><th>Instansi</th><th>Alamat</th><th>No. HP</th><th>Keperluan</th><th>Bertemu Dengan</th></tr>
+    </thead>
+    <tbody id="print-tbody"></tbody>
+  </table>
+  <div class="sign-block">
+    <div class="sign-box">
+      <div>Singorojo, <span id="print-tanggal-cetak"></span></div>
+      <div>Petugas Buku Tamu,</div>
+      <div class="stamp-ring"><span>SMAN 1<br>SGRJ</span></div>
+      <div class="name" id="print-nama-petugas">—</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- AUTH ---------------- */
+const ACCOUNTS = {
+  petugas1: { password: 'sman1sgrjo1', label: 'Petugas 1' },
+  petugas2: { password: 'sman1sgrjo2', label: 'Petugas 2' }
+};
+let currentUser = null;
+
+function doLogin(){
+  const id = document.getElementById('login-id').value;
+  const pass = document.getElementById('login-pass').value;
+  const acc = ACCOUNTS[id];
+  const errBox = document.getElementById('login-error');
+  if(acc && acc.password === pass){
+    currentUser = { id, label: acc.label };
+    errBox.style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    document.getElementById('who-badge').textContent = acc.label;
+    initApp();
+  } else {
+    errBox.style.display = 'block';
+  }
+}
+
+function doLogout(){
+  currentUser = null;
+  document.getElementById('login-pass').value = '';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+/* ---------------- TABS ---------------- */
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('tab-input').style.display = tab === 'input' ? 'block' : 'none';
+  document.getElementById('tab-data').style.display = tab === 'data' ? 'block' : 'none';
+  document.getElementById('tab-laporan').style.display = tab === 'laporan' ? 'block' : 'none';
+  if(tab === 'data') renderDataTable();
+  if(tab === 'laporan') renderLaporan();
+}
+
+/* ---------------- DATA (persisted, shared across petugas) ---------------- */
+const STORAGE_KEY = 'buku-tamu-data';
+let tamuList = [];
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    tamuList = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    tamuList = [];
+  }
+}
+
+async function saveData(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(tamuList), true);
+  }catch(e){
+    showToast('Gagal menyimpan data. Coba lagi.');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.style.display = 'none', 2400);
+}
+
+async function submitTamu(){
+  const nama = document.getElementById('f-nama').value.trim();
+  const instansi = document.getElementById('f-instansi').value.trim();
+  const alamat = document.getElementById('f-alamat').value.trim();
+  const hp = document.getElementById('f-hp').value.trim();
+  const bertemu = document.getElementById('f-bertemu').value.trim();
+  const keperluan = document.getElementById('f-keperluan').value.trim();
+
+  if(!nama || !keperluan){
+    showToast('Nama tamu dan keperluan wajib diisi.');
+    return;
+  }
+
+  const now = new Date();
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    tanggalISO: now.toISOString(),
+    nama, instansi, alamat, hp, bertemu, keperluan,
+    petugas: currentUser.label
+  };
+  tamuList.push(entry);
+  await saveData();
+  showToast('Data tamu berhasil disimpan.');
+
+  ['f-nama','f-instansi','f-alamat','f-hp','f-bertemu','f-keperluan'].forEach(id => document.getElementById(id).value = '');
+}
+
+function fmtTanggal(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) + ' ' +
+         d.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+}
+
+function renderDataTable(){
+  const q = (document.getElementById('search-box').value || '').toLowerCase();
+  const tbody = document.getElementById('data-tbody');
+  const sorted = [...tamuList].sort((a,b) => new Date(b.tanggalISO) - new Date(a.tanggalISO));
+  const filtered = sorted.filter(t =>
+    t.nama.toLowerCase().includes(q) || (t.instansi||'').toLowerCase().includes(q)
+  );
+  tbody.innerHTML = '';
+  document.getElementById('data-empty').style.display = filtered.length ? 'none' : 'block';
+  filtered.forEach((t, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${i+1}</td>
+      <td class="mono">${fmtTanggal(t.tanggalISO)}</td>
+      <td>${escapeHtml(t.nama)}</td>
+      <td>${escapeHtml(t.instansi||'—')}</td>
+      <td class="mono">${escapeHtml(t.hp||'—')}</td>
+      <td>${escapeHtml(t.keperluan)}</td>
+      <td>${escapeHtml(t.bertemu||'—')}</td>
+      <td>${escapeHtml(t.petugas)}</td>
+      <td><button class="del-btn" onclick="hapusTamu('${t.id}')">Hapus</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function hapusTamu(id){
+  if(!confirm('Hapus data tamu ini?')) return;
+  tamuList = tamuList.filter(t => t.id !== id);
+  await saveData();
+  renderDataTable();
+  showToast('Data tamu dihapus.');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+/* ---------------- LAPORAN BULANAN ---------------- */
+const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function initLaporanSelectors(){
+  const bulanSel = document.getElementById('lap-bulan');
+  const tahunSel = document.getElementById('lap-tahun');
+  const now = new Date();
+  bulanSel.innerHTML = NAMA_BULAN.map((b,i) => `<option value="${i}" ${i===now.getMonth()?'selected':''}>${b}</option>`).join('');
+  const startYear = now.getFullYear() - 3;
+  let opts = '';
+  for(let y = now.getFullYear() + 1; y >= startYear; y--){
+    opts += `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`;
+  }
+  tahunSel.innerHTML = opts;
+}
+
+function getLaporanFiltered(){
+  const bulan = parseInt(document.getElementById('lap-bulan').value, 10);
+  const tahun = parseInt(document.getElementById('lap-tahun').value, 10);
+  return tamuList
+    .filter(t => {
+      const d = new Date(t.tanggalISO);
+      return d.getMonth() === bulan && d.getFullYear() === tahun;
+    })
+    .sort((a,b) => new Date(a.tanggalISO) - new Date(b.tanggalISO));
+}
+
+function renderLaporan(){
+  const data = getLaporanFiltered();
+  const tbody = document.getElementById('lap-tbody');
+  tbody.innerHTML = '';
+  document.getElementById('lap-empty').style.display = data.length ? 'none' : 'block';
+  data.forEach((t, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${i+1}</td>
+      <td class="mono">${fmtTanggal(t.tanggalISO)}</td>
+      <td>${escapeHtml(t.nama)}</td>
+      <td>${escapeHtml(t.instansi||'—')}</td>
+      <td>${escapeHtml(t.keperluan)}</td>
+      <td>${escapeHtml(t.bertemu||'—')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('stat-total').textContent = data.length;
+  const uniqInstansi = new Set(data.map(t => (t.instansi||'').trim().toLowerCase()).filter(Boolean));
+  document.getElementById('stat-instansi').textContent = uniqInstansi.size;
+}
+
+function cetakLaporan(){
+  const data = getLaporanFiltered();
+  const bulanIdx = parseInt(document.getElementById('lap-bulan').value, 10);
+  const tahun = document.getElementById('lap-tahun').value;
+  document.getElementById('print-periode').textContent = `Periode: ${NAMA_BULAN[bulanIdx]} ${tahun}`;
+  document.getElementById('print-nama-petugas').textContent = currentUser ? currentUser.label : '—';
+  document.getElementById('print-tanggal-cetak').textContent = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+
+  const tbody = document.getElementById('print-tbody');
+  tbody.innerHTML = '';
+  if(data.length === 0){
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:16px; color:#5B6472;">Tidak ada data kunjungan pada periode ini.</td></tr>`;
+  } else {
+    data.forEach((t, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${fmtTanggal(t.tanggalISO)}</td>
+        <td>${escapeHtml(t.nama)}</td>
+        <td>${escapeHtml(t.instansi||'—')}</td>
+        <td>${escapeHtml(t.alamat||'—')}</td>
+        <td>${escapeHtml(t.hp||'—')}</td>
+        <td>${escapeHtml(t.keperluan)}</td>
+        <td>${escapeHtml(t.bertemu||'—')}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  window.print();
+}
+
+/* ---------------- INIT ---------------- */
+async function initApp(){
+  await loadData();
+  initLaporanSelectors();
+  renderDataTable();
+  renderLaporan();
+}
+</script>
+</body>
+</html>
