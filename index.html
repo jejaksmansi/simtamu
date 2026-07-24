@@ -283,6 +283,7 @@
       </div>
     </div>
     <div class="who">
+      <span class="badge" id="conn-status" style="font-size:11px;">○ Memeriksa koneksi…</span>
       <span class="badge" id="who-badge">Petugas</span>
       <button onclick="doLogout()">Keluar</button>
     </div>
@@ -469,11 +470,52 @@ function switchTab(tab){
   if(tab === 'laporan') renderLaporan();
 }
 
-/* ---------------- DATA (persisted, shared across petugas) ---------------- */
-const STORAGE_KEY = 'buku-tamu-data';
+/* ---------------- DATA (disimpan ke Google Sheets via Apps Script Web App) ---------------- */
+// Ganti URL di bawah ini dengan URL Web App hasil deploy Apps Script Anda
+// (lihat file AppsScript_Code.gs untuk kode dan langkah deploy-nya).
+// URL harus diakhiri dengan /exec
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwskQa3A23oNccYZ98bhD_0M0iDRoIHwxtSpj7IzKBqpeNq30oRiC0UbQO6swevbFNkng/exec';
+
+const STORAGE_KEY = 'buku-tamu-data-cache'; // cadangan offline lokal
 let tamuList = [];
+let sheetConnected = false;
+
+function isGasConfigured(){
+  return GAS_WEB_APP_URL && GAS_WEB_APP_URL.indexOf('https://script.google.com') === 0;
+}
 
 async function loadData(){
+  if(!isGasConfigured()){
+    updateConnStatus(false, 'Belum terhubung ke Google Sheets');
+    await loadFromCache();
+    return;
+  }
+  try{
+    const res = await fetch(GAS_WEB_APP_URL, { method: 'GET' });
+    const json = await res.json();
+    if(json && json.success){
+      tamuList = (json.data || []).map(normalizeEntry);
+      sheetConnected = true;
+      updateConnStatus(true, 'Tersambung ke Google Sheets');
+      await cacheLocally();
+    } else {
+      throw new Error(json && json.error ? json.error : 'Gagal memuat data');
+    }
+  }catch(e){
+    sheetConnected = false;
+    updateConnStatus(false, 'Gagal terhubung, memuat data cadangan lokal');
+    await loadFromCache();
+  }
+}
+
+function normalizeEntry(d){
+  return {
+    id: d.id, tanggalISO: d.tanggalISO, nama: d.nama, instansi: d.instansi,
+    alamat: d.alamat, hp: d.hp, bertemu: d.bertemu, keperluan: d.keperluan, petugas: d.petugas
+  };
+}
+
+async function loadFromCache(){
   try{
     const res = await window.storage.get(STORAGE_KEY, true);
     tamuList = res && res.value ? JSON.parse(res.value) : [];
@@ -482,12 +524,31 @@ async function loadData(){
   }
 }
 
-async function saveData(){
+async function cacheLocally(){
   try{
     await window.storage.set(STORAGE_KEY, JSON.stringify(tamuList), true);
+  }catch(e){ /* abaikan jika gagal cache */ }
+}
+
+async function gasPost(payload){
+  if(!isGasConfigured()) return { success:false, error:'Belum dikonfigurasi' };
+  try{
+    const res = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari preflight CORS
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
   }catch(e){
-    showToast('Gagal menyimpan data. Coba lagi.');
+    return { success:false, error: e.message };
   }
+}
+
+function updateConnStatus(ok, text){
+  const el = document.getElementById('conn-status');
+  if(!el) return;
+  el.textContent = (ok ? '● ' : '○ ') + text;
+  el.style.color = ok ? '#7DD9C5' : '#F1B4A8';
 }
 
 function showToast(msg){
@@ -518,9 +579,20 @@ async function submitTamu(){
     nama, instansi, alamat, hp, bertemu, keperluan,
     petugas: currentUser.label
   };
+
   tamuList.push(entry);
-  await saveData();
-  showToast('Data tamu berhasil disimpan.');
+  await cacheLocally();
+
+  if(isGasConfigured()){
+    const result = await gasPost({ action: 'add', data: entry });
+    if(result && result.success){
+      showToast('Data tamu berhasil disimpan ke Google Sheets.');
+    } else {
+      showToast('Tersimpan lokal, tetapi gagal sinkron ke Google Sheets.');
+    }
+  } else {
+    showToast('Data tersimpan lokal (Google Sheets belum dikonfigurasi).');
+  }
 
   ['f-nama','f-instansi','f-alamat','f-hp','f-bertemu','f-keperluan'].forEach(id => document.getElementById(id).value = '');
 }
@@ -560,7 +632,10 @@ function renderDataTable(){
 async function hapusTamu(id){
   if(!confirm('Hapus data tamu ini?')) return;
   tamuList = tamuList.filter(t => t.id !== id);
-  await saveData();
+  await cacheLocally();
+  if(isGasConfigured()){
+    await gasPost({ action: 'delete', id });
+  }
   renderDataTable();
   showToast('Data tamu dihapus.');
 }
