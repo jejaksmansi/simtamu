@@ -252,22 +252,15 @@
       <p class="sub">Silakan pilih akun dan masukkan kata sandi untuk mengelola buku tamu.</p>
       <div class="login-error" id="login-error">ID atau kata sandi tidak sesuai. Silakan coba lagi.</div>
       <div class="field">
-        <label for="login-id">Petugas</label>
-        <select id="login-id">
-          <option value="petugas1">Petugas 1</option>
-          <option value="petugas2">Petugas 2</option>
-        </select>
-      </div>
+  <label for="login-id-input">ID Pengguna</label>
+  <input type="text" id="login-id-input" placeholder="Masukkan ID pengguna" autocomplete="username">
+</div>
       <div class="field">
         <label for="login-pass">Kata Sandi</label>
         <input type="password" id="login-pass" placeholder="Masukkan kata sandi" onkeydown="if(event.key==='Enter') doLogin()">
       </div>
       <button class="btn" onclick="doLogin()">Masuk</button>
-      <div class="login-hint">
-        <b>Akun demo:</b><br>
-        Petugas 1 — sandi: <b>sman1sgrjo1</b><br>
-        Petugas 2 — sandi: <b>sman1sgrjo2</b>
-      </div>
+      <div class="login-hint">Belum punya akun? Hubungi Admin sekolah untuk didaftarkan.</div>
     </div>
   </div>
 </div>
@@ -292,7 +285,7 @@
   <nav class="tabs">
     <button class="tab-btn active" data-tab="input" onclick="switchTab('input')">Input Tamu</button>
     <button class="tab-btn" data-tab="data" onclick="switchTab('data')">Data Tamu</button>
-    <button class="tab-btn" data-tab="laporan" onclick="switchTab('laporan')">Laporan Bulanan</button>
+    <button class="tab-btn" data-tab="laporan" onclick="switchTab('laporan')">Laporan Bulanan<button class="tab-btn" data-tab="admin" onclick="switchTab('admin')" id="admin-tab-btn" style="display:none;">Admin</button>
   </nav>
 
   <main>
@@ -393,6 +386,27 @@
         <div class="empty-state" id="lap-empty" style="display:none;">Tidak ada data kunjungan pada periode ini.</div>
       </div>
     </section>
+    <section class="panel" id="tab-admin" style="display:none;">
+  <h2>Manajemen Pengguna</h2>
+  <p class="desc">Tambah, ubah status, atau hapus akun pengguna. Hanya untuk Admin.</p>
+  <div class="grid2">
+    <div class="field"><label>ID / Username</label><input type="text" id="u-id" placeholder="Contoh: petugas3"></div>
+    <div class="field"><label>Nama User</label><input type="text" id="u-nama" placeholder="Nama lengkap"></div>
+  </div>
+  <div class="grid2">
+    <div class="field"><label>Password</label><input type="text" id="u-pass" placeholder="Kata sandi"></div>
+    <div class="field"><label>Status</label>
+      <select id="u-status"><option value="user">User (Petugas)</option><option value="admin">Admin</option></select>
+    </div>
+  </div>
+  <button class="btn" style="width:auto; padding:12px 24px;" onclick="submitUser()">Tambah Pengguna</button>
+  <h2 style="margin-top:30px;">Daftar Pengguna</h2>
+  <div style="overflow-x:auto;">
+    <table><thead><tr><th>ID</th><th>Nama</th><th>Status</th><th></th></tr></thead>
+      <tbody id="user-tbody"></tbody></table>
+    <div class="empty-state" id="user-empty" style="display:none;">Belum ada data pengguna.</div>
+  </div>
+</section>
   </main>
 </div>
 
@@ -430,23 +444,41 @@
 
 <script>
 /* ---------------- AUTH ---------------- */
-const ACCOUNTS = {
-  petugas1: { password: 'sman1sgrjo1', label: 'Petugas 1' },
-  petugas2: { password: 'sman1sgrjo2', label: 'Petugas 2' }
-};
-let currentUser = null;
+const ACCOUNTS = let currentUser = null;
+let usersList = [];
+const USERS_CACHE_KEY = 'buku-tamu-users-cache';
+const FALLBACK_ADMIN = { id: 'admin', nama: 'Admin Cadangan', password: 'admin123', status: 'admin' };
 
-function doLogin(){
-  const id = document.getElementById('login-id').value;
+async function loadUsers(){
+  if(isGasConfigured()){
+    try{
+      const res = await fetch(GAS_WEB_APP_URL + '?type=users');
+      const json = await res.json();
+      if(json && json.success){
+        usersList = (json.data && json.data.length) ? json.data : [FALLBACK_ADMIN];
+        await window.storage.set(USERS_CACHE_KEY, JSON.stringify(usersList), true);
+        return;
+      }
+    }catch(e){ /* fallback ke cache */ }
+  }
+  try{
+    const cached = await window.storage.get(USERS_CACHE_KEY, true);
+    usersList = cached && cached.value ? JSON.parse(cached.value) : [FALLBACK_ADMIN];
+  }catch(e){ usersList = [FALLBACK_ADMIN]; }
+}
+
+async function doLogin(){
+  const id = document.getElementById('login-id-input').value.trim();
   const pass = document.getElementById('login-pass').value;
-  const acc = ACCOUNTS[id];
   const errBox = document.getElementById('login-error');
-  if(acc && acc.password === pass){
-    currentUser = { id, label: acc.label };
+  const acc = usersList.find(u => String(u.id) === id && String(u.password) === pass);
+  if(acc){
+    currentUser = { id: acc.id, label: acc.nama, status: (acc.status || 'user').toLowerCase() };
     errBox.style.display = 'none';
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
-    document.getElementById('who-badge').textContent = acc.label;
+    document.getElementById('who-badge').textContent = acc.nama + (currentUser.status === 'admin' ? ' (Admin)' : '');
+    document.getElementById('admin-tab-btn').style.display = currentUser.status === 'admin' ? '' : 'none';
     initApp();
   } else {
     errBox.style.display = 'block';
@@ -456,18 +488,22 @@ function doLogin(){
 function doLogout(){
   currentUser = null;
   document.getElementById('login-pass').value = '';
+  document.getElementById('admin-tab-btn').style.display = 'none';
   document.getElementById('app-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 }
 
 /* ---------------- TABS ---------------- */
 function switchTab(tab){
+  if(tab === 'admin' && (!currentUser || currentUser.status !== 'admin')) return; // ⬅ baru
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.getElementById('tab-input').style.display = tab === 'input' ? 'block' : 'none';
   document.getElementById('tab-data').style.display = tab === 'data' ? 'block' : 'none';
   document.getElementById('tab-laporan').style.display = tab === 'laporan' ? 'block' : 'none';
+  document.getElementById('tab-admin').style.display = tab === 'admin' ? 'block' : 'none'; // ⬅ baru
   if(tab === 'data') renderDataTable();
   if(tab === 'laporan') renderLaporan();
+  if(tab === 'admin') renderUserTable(); // ⬅ baru
 }
 
 /* ---------------- DATA (disimpan ke Google Sheets via Apps Script Web App) ---------------- */
@@ -645,7 +681,64 @@ function escapeHtml(str){
   div.textContent = str ?? '';
   return div.innerHTML;
 }
+function renderUserTable(){
+  const tbody = document.getElementById('user-tbody');
+  tbody.innerHTML = '';
+  document.getElementById('user-empty').style.display = usersList.length ? 'none' : 'block';
+  usersList.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${escapeHtml(u.id)}</td>
+      <td>${escapeHtml(u.nama)}</td>
+      <td>${u.status === 'admin' ? '<b style="color:var(--navy)">Admin</b>' : 'User'}</td>
+      <td>
+        <button class="btn-outline" style="padding:5px 10px; font-size:12px;" onclick="ubahStatusUser('${u.id}','${u.status === 'admin' ? 'user' : 'admin'}')">Jadikan ${u.status === 'admin' ? 'User' : 'Admin'}</button>
+        <button class="del-btn" onclick="hapusUser('${u.id}')">Hapus</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
 
+async function submitUser(){
+  const id = document.getElementById('u-id').value.trim();
+  const nama = document.getElementById('u-nama').value.trim();
+  const password = document.getElementById('u-pass').value;
+  const status = document.getElementById('u-status').value;
+  if(!id || !nama || !password){ showToast('ID, nama, dan password wajib diisi.'); return; }
+  if(usersList.some(u => String(u.id) === id)){ showToast('ID pengguna sudah digunakan.'); return; }
+
+  const newUser = { id, nama, password, status };
+  usersList.push(newUser);
+  renderUserTable();
+  await window.storage.set(USERS_CACHE_KEY, JSON.stringify(usersList), true);
+
+  if(isGasConfigured()){
+    const result = await gasPost({ action: 'addUser', data: newUser });
+    showToast(result && result.success ? 'Pengguna berhasil ditambahkan.' : 'Tersimpan lokal, gagal sinkron ke Sheets.');
+  } else {
+    showToast('Pengguna tersimpan lokal (Sheets belum dikonfigurasi).');
+  }
+  ['u-id','u-nama','u-pass'].forEach(x => document.getElementById(x).value = '');
+}
+
+async function hapusUser(id){
+  if(currentUser && id === currentUser.id){ showToast('Tidak bisa menghapus akun yang sedang digunakan.'); return; }
+  if(!confirm('Hapus pengguna ini?')) return;
+  usersList = usersList.filter(u => String(u.id) !== String(id));
+  renderUserTable();
+  await window.storage.set(USERS_CACHE_KEY, JSON.stringify(usersList), true);
+  if(isGasConfigured()) await gasPost({ action: 'deleteUser', id });
+  showToast('Pengguna dihapus.');
+}
+
+async function ubahStatusUser(id, status){
+  const u = usersList.find(u => String(u.id) === String(id));
+  if(u) u.status = status;
+  renderUserTable();
+  await window.storage.set(USERS_CACHE_KEY, JSON.stringify(usersList), true);
+  if(isGasConfigured()) await gasPost({ action: 'updateUserStatus', id, status });
+  showToast('Status pengguna diperbarui.');
+}
 /* ---------------- LAPORAN BULANAN ---------------- */
 const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -733,6 +826,7 @@ async function initApp(){
   renderDataTable();
   renderLaporan();
 }
+window.addEventListener('DOMContentLoaded', loadUsers);
 </script>
 </body>
 </html>
