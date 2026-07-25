@@ -444,7 +444,10 @@
 
 <script>
 /* ---------------- AUTH ---------------- */
-const ACCOUNTS = let currentUser = null;
+let currentUser = null;
+let usersList = [];
+const USERS_CACHE_KEY = 'buku-tamu-users-cache';
+const FALLBACK_ADMIN = { id: 'admin', nama: 'Admin Cadangan', password: 'admin123', status: 'admin' }; let currentUser = null;
 let usersList = [];
 const USERS_CACHE_KEY = 'buku-tamu-users-cache';
 const FALLBACK_ADMIN = { id: 'admin', nama: 'Admin Cadangan', password: 'admin123', status: 'admin' };
