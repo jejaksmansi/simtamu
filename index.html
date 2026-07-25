@@ -484,6 +484,7 @@ async function doLogin(){
     errBox.style.display = 'block';
   }
 }
+window.addEventListener('DOMContentLoaded', loadUsers);
 
 function doLogout(){
   currentUser = null;
@@ -825,8 +826,8 @@ async function initApp(){
   initLaporanSelectors();
   renderDataTable();
   renderLaporan();
-  window.addEventListener('DOMContentLoaded', loadUsers);
 }
+
 </script>
 </body>
 </html>
