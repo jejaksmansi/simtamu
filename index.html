@@ -468,7 +468,6 @@ async function loadUsers(){
     const cached = await window.storage.get(USERS_CACHE_KEY, true);
     usersList = cached && cached.value ? JSON.parse(cached.value) : [FALLBACK_ADMIN];
   }catch(e){ usersList = [FALLBACK_ADMIN]; }
-  window.addEventListener('DOMContentLoaded', loadUsers);
 }
 
 async function doLogin(){
@@ -833,6 +832,10 @@ async function initApp(){
   renderDataTable();
   renderLaporan();
 }
+
+// Panggil loadUsers() saat halaman pertama kali dimuat, sebelum orang login.
+// Inilah baris yang hilang di versi sebelumnya sehingga login selalu gagal.
+window.addEventListener('DOMContentLoaded', loadUsers);
 </script>
 </body>
 </html>
